@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Fiber Laser Training Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Red, Dark Grey, Navy, White -->
+    <!-- Application Structure Plan: The SPA uses a tab-based navigation system to provide a non-linear, task-oriented experience. This is more effective for post-training reference than a chronological format, allowing users to quickly access specific information (e.g., G-Code commands, maintenance tasks). The key sections are: Welcome, Fundamentals, Machine Tour, an interactive Weld Lab, MotionFX guide, and a Maintenance checklist. The structure prioritizes usability and quick information retrieval. The interactive Weld Lab is the centerpiece, designed to build intuitive understanding through direct manipulation and visual feedback. -->
+    <!-- Visualization & Content Choices: 
+        - Laser Parameters -> Goal: Change/Relate -> Viz: Interactive Chart.js line chart controlled by sliders -> Interaction: User drags sliders for Energy, Pulse Width, etc., to see real-time updates on the weld profile chart -> Justification: Provides immediate, memorable visual feedback on how abstract parameters create physical weld characteristics -> Library: Chart.js.
+        - Pulse Shapes -> Goal: Compare -> Viz: Dynamic Chart.js bar chart and descriptive text -> Interaction: User selects a pulse profile from a dropdown to view its energy distribution and recommended use case -> Justification: Clearly visualizes and explains the difference and purpose of each specialized pulse shape -> Library: Chart.js.
+        - G-Code Commands -> Goal: Organize/Inform -> Viz: An interactive grid of G-Code commands -> Interaction: Clicking a command opens a modal with a detailed explanation and example -> Justification: A fast and efficient lookup tool for operators programming the machine -> Library/Method: HTML/CSS/JS.
+        - Machine Components -> Goal: Inform/Organize -> Viz: A simple, clean card layout for different components -> Interaction: Users can read about each component in a structured way -> Justification: An easy-to-digest overview of the physical machine parts -> Library/Method: HTML/CSS/JS.
+        - Maintenance Schedule -> Goal: Inform -> Viz: A clear, checklist-style layout with icons -> Interaction: Simple information display -> Justification: Provides a quick, scannable reference for required maintenance tasks. -> Library/Method: HTML/CSS/JS. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Roboto', sans-serif; }
+        .tab-active { border-color: #dc2626; color: #dc2626; background-color: #fef2f2; } /* Red-600 border, text, Red-50 background */
+        .tab-inactive { border-color: transparent; color: #4b5563; } /* Gray-700 for dark grey text */
+        .content-active { display: block; }
+        .content-inactive { display: none; }
+        .chart-container { position: relative; width: 100%; max-width: 600px; margin-left: auto; margin-right: auto; height: 300px; max-height: 400px; }
+        @media (min-width: 768px) { .chart-container { height: 350px; } }
+
+        /* Custom styles for axis labels */
+        .axis-label-x {
+            position: absolute;
+            bottom: -20px; /* Adjusted to move label up */
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.875rem; /* text-sm */
+            color: #4b5563; /* gray-700 */
+        }
+        .axis-label-y {
+            position: absolute;
+            left: -30px; /* Adjust as needed */
+            top: 50%;
+            transform: translateY(-50%) rotate(-90deg);
+            font-size: 0.875rem; /* text-sm */
+            color: #4b5563; /* gray-700 */
+            white-space: nowrap; /* Prevent text wrapping */
+        }
+        /* Class for clickable images */
+        .zoomable-image {
+            cursor: zoom-in;
+        }
+        .zoomed-in-image {
+            max-width: 90vw;
+            max-height: 90vh;
+            object-fit: contain;
+            display: block; /* Ensure margin auto works */
+            margin-left: auto;
+            margin-right: auto;
+        }
+    </style>
+</head>
+<body class="bg-white text-gray-800">
+
+    <div id="app" class="container mx-auto p-4 sm:p-6 lg:p-8">
+        
+        <header class="text-center mb-8">
+            <img src="https://process.fs.teachablecdn.com/ADNupMnWyR7kCWRvm76Laz/resize=height:60/https://www.filepicker.io/api/file/qhqqxrJFS5YHLxqoVg22" alt="LaserStar Technologies Logo" class="mx-auto mb-4 h-16">
+            <h1 class="text-3xl sm:text-4xl font-bold text-red-600">Fiber Laser Training Guide</h1>
+            <p class="mt-2 text-lg text-gray-700">An Interactive Course by Nolan McGinley, Laser Applications Engineer</p>
+        </header>
+
+        <nav class="mb-8 overflow-x-auto pb-2">
+            <ul id="tabs" class="flex flex-nowrap border-b border-gray-200 text-center text-sm font-medium">
+                <li class="flex-shrink-0"><button class="nav-tab inline-block p-4 border-b-2 rounded-t-lg" data-tab="welcome_overview">Welcome & Overview</button></li>
+                <li class="flex-shrink-0"><button class="nav-tab inline-block p-4 border-b-2 rounded-t-lg" data-tab="fundamentals">Fundamentals</button></li>
+                <li class="flex-shrink-0"><button class="nav-tab inline-block p-4 border-b-2 rounded-t-lg" data-tab="machine">Machine Tour</button></li>
+                <li class="flex-shrink-0"><button class="nav-tab inline-block p-4 border-b-2 rounded-t-lg" data-tab="weldlab">Weld Lab</button></li>
+                <li class="flex-shrink-0"><button class="nav-tab inline-block p-4 border-b-2 rounded-t-lg" data-tab="motionfx">MotionFX</button></li>
+                <li class="flex-shrink-0"><button class="nav-tab inline-block p-4 border-b-2 rounded-t-lg" data-tab="maintenance">Maintenance</button></li>
+                <li class="flex-shrink-0"><button class="nav-tab inline-block p-4 border-b-2 rounded-t-lg" data-tab="files">Files</button></li>
+                <li class="flex-shrink-0"><button class="nav-tab inline-block p-4 border-b-2 rounded-t-lg" data-tab="pre_training_email">Pre-Training Email</button></li>
+            </ul>
+        </nav>
+
+        <main id="tab-content">
+        </main>
+
+    </div>
+
+    <div id="modal-container" class="fixed inset-0 bg-gray-900 bg-opacity-75 z-50 p-4 items-center justify-center hidden">
+        <div id="modal-content" class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-full overflow-y-auto p-6 relative">
+            <button id="modal-close" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-2xl">&times;</button>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+
+    <div class="container mx-auto p-4 mt-8 text-center text-sm text-gray-500">
+        <p>Note: This is meant for internal use only. Do not share with customers unless explicitly directed. Information varies based on model number.</p>
+    </div>
+
+    <script>
+        const appData = {
+            welcome_overview: { // Combined tab
+                title: 'Welcome & Training Overview',
+                content: `
+                    <div class="bg-white p-8 rounded-lg shadow-md">
+                        <h2 class="text-2xl font-bold mb-4 text-red-600">Course Overview</h2>
+                        <p class="mb-4 text-gray-700">This interactive guide is designed to supplement your two-day fiber laser training course. It provides a flexible way to explore key concepts, from laser theory and safety to advanced welding techniques and machine maintenance. Use the navigation tabs above to jump to any topic.</p>
+                        <img src="https://img.directindustry.com/images_di/photo-g/53219-18928242.webp" alt="FiberStar Industrial Laser Welder" class="zoomable-image mx-auto my-6 rounded-lg shadow-md w-full max-w-xs">
+                        
+                        <h2 class="text-2xl font-bold mb-6 text-red-600">Training Overview</h2> 
+                        <p class="mb-6 text-gray-700">This section provides a consolidated overview of both Day 1 and Day 2 training modules. Click on any module title to view its detailed description and covered topics.</p>
+                        
+                        <div class="space-y-4">
+                            <h3 class="font-semibold text-xl mt-6 mb-3 text-red-600">Day 1 Modules</h3>
+                            <button data-day-category="day1" data-module-id="module1" class="module-btn w-full text-left p-4 bg-white rounded-lg shadow hover:shadow-lg hover:bg-red-50 transition">
+                                <h3 class="font-semibold text-xl text-gray-900">Introduction to Fiber Lasers & Safety</h3>
+                            </button>
+                            <button data-day-category="day1" data-module-id="module2" class="module-btn w-full text-left p-4 bg-white rounded-lg shadow hover:shadow-lg hover:bg-red-50 transition">
+                                <h3 class="font-semibold text-xl text-gray-900">Machine Components & Initial Setup</h3>
+                            </button>
+                            <button data-day-category="day1" data-module-id="module3" class="module-btn w-full text-left p-4 bg-white rounded-lg shadow hover:shadow-lg hover:bg-red-50 transition">
+                                <h3 class="font-semibold text-xl text-gray-900">Weld Chamber & Basic Alignment</h3>
+                            </button>
+
+                            <div class="py-4"></div> 
+
+                            <h3 class="font-semibold text-xl mt-6 mb-3 text-red-600">Day 2 Modules</h3>
+                            <button data-day-category="day2" data-module-id="module4" class="module-btn w-full text-left p-4 bg-white rounded-lg shadow hover:shadow-lg hover:bg-red-50 transition">
+                                <h3 class="font-semibold text-xl text-gray-900">Laser Parameters & Weld Characteristics</h3>
+                            </button>
+                            <button data-day-category="day2" data-module-id="module5" class="module-btn w-full text-left p-4 bg-white rounded-lg shadow hover:shadow-lg hover:bg-red-50 transition">
+                                <h3 class="font-semibold text-xl text-gray-900">Weld Types & Optimizing Welds</h3>
+                            </button>
+                            <button data-day-category="day2" data-module-id="module6" class="module-btn w-full text-left p-4 bg-white rounded-lg shadow hover:shadow-lg hover:bg-red-50 transition">
+                                <h3 class="font-semibold text-xl text-gray-900">MotionFX & G-Code Basics</h3>
+                            </button>
+                            <button data-day-category="day2" data-module-id="module7" class="module-btn w-full text-left p-4 bg-white rounded-lg shadow hover:shadow-lg hover:bg-red-50 transition">
+                                <h3 class="font-semibold text-xl text-gray-900">Maintenance & Troubleshooting</h3>
+                            </button>
+                        </div>
+                    </div>
+                `,
+                // Correctly structured modules for direct access
+                day1_modules_content: [
+                    {
+                        id: 'module1',
+                        title: 'Introduction to Fiber Lasers & Safety',
+                        details: `
+                            <p class="mb-4">This module covers the foundational aspects of fiber lasers and essential safety measures.</p>
+                            <h4 class="font-semibold mt-4 mb-2">Details:</h4>
+                            <ul class="list-disc list-inside space-y-1 text-gray-700">
+                                <li class="ml-4">Welcome & Introductions: Course overview and attendee introductions.</li>
+                                <li class="ml-4">Laser Theory & Principles: What is a LASER?, monochromatic light, and key terms (Energy (J), Pulse Width, Frequency, Peak Power, Average Power, Burst Mode).</li>
+                                <li class="ml-4">Laser Safety: Understanding Class 4 systems, eye protection (OD >6.5), remote interlocks, view shutters, and safety glass.</li>
+                            </ul>
+                        `
+                    },
+                    {
+                        id: 'module2',
+                        title: 'Machine Components & Initial Setup',
+                        details: `
+                            <p class="mb-4">This module delves into the physical components of the laser system and guides you through the essential initial setup procedures for operation.</p>
+                            <h4 class="font-semibold mt-4 mb-2">Details:</h4>
+                            <ul class="list-disc list-inside space-y-1 text-gray-700">
+                                <li class="ml-4">Power-Up Procedure: Step-by-step guide including Power, and Key.</li>
+                                <li>Inert Gas Overview: Importance of Argon (preventing oxidation), gas regulator settings (CFH, PSI), nozzle aiming, and gas activation.</li>
+                                <li class="ml-4">Laser Engine & Optical Rail: Overview of laser engine (1064nm, fiber optic cable) and optical rail components (Collimator, Shutter, Beam Expander, Beam Bender, Beam Waist concept).</li>
+                            </ul>
+                        `
+                    },
+                    {
+                        id: 'module3',
+                        title: 'Weld Chamber & Basic Alignment',
+                        details: `
+                            <p class="mb-4">This module focuses on familiarizing you with the weld chamber and the critical steps for basic alignment to ensure precise laser operation.</p>
+                            <h4 class="font-semibold mt-4 mb-2">Details:</h4>
+                            <ul class="list-disc list-inside space-y-1 text-gray-700">
+                                <li class="ml-4">Weld Chamber Overview: Familiarization with internal components (LED lights, fan filter, Argon nozzle, dimmer).</li>
+                                <li class="ml-4">Crosshair Alignment: Procedure for aligning the crosshair with the weld spot.</li>
+                                <li class="ml-4">Camera Setup: Steps for configuring the machine's camera for visual focus.</li>
+                            </ul>
+                        `
+                    }
+                ],
+                day2_modules_content: [
+                    {
+                        id: 'module4',
+                        title: 'Laser Parameters & Weld Characteristics',
+                        details: `
+                            <p class="mb-4">This module provides an in-depth understanding of how various laser parameters influence the characteristics of a weld.</p>
+                            <h4 class="font-semibold mt-4 mb-2">Details:</h4>
+                            <ul class="list-disc list-inside space-y-1 text-gray-700">
+                                <li>Anatomy of a Weld: Exploring the Gaseous, Liquid, and Heat Affected Zone (HAZ).</li>
+                                <li>Detailed Laser Parameters: In-depth look at Energy, Pulse Width, Frequency, Beam Diameter, Burst Mode, and the various Pulse Shapes (P3).</li>
+                                <li>How Parameters Affect Welds: Visualizing and discussing the impact of parameter changes on weld outcomes.</li>
+                            </ul>
+                        `
+                    },
+                    {
+                        id: 'module5',
+                        title: 'Weld Types & Optimizing Welds',
+                        details: `
+                            <p class="mb-4">This module explores different types of welds and techniques to optimize weld quality for specific applications and desired outcomes.</p>
+                            <h4 class="font-semibold mt-4 mb-2">Details:</h4>
+                            <ul class="list-disc list-inside space-y-1 text-gray-700">
+                                <li>Types of Welds: Understanding Keyhole, Cold, and undesireable Holes/Pits welds.</li>
+                                <li>Smoothing with the Laser: Techniques like "Hammering" using beam spread or Z-axis adjustment.</li>
+                                <li>Weld Overlap & Weld Beads: Goals for regular and hermetically sealed welds, and the Overlap formula (Frequency / Speed).</li>
+                            </ul>
+                        `
+                    },
+                    {
+                        id: 'module6',
+                        title: 'MotionFX & G-Code Basics',
+                        details: `
+                            <p class="mb-4">This module introduces the MotionFX software and the fundamentals of G-Code programming for precise laser movement and automation.</p>
+                            <h4 class="font-semibold mt-4 mb-2">Details:</h4>
+                            <ul class="list-disc list-inside space-y-1 text-gray-700">
+                                <li>Introduction to MotionFX & G-Code: Multi-axis control and programming fundamentals, including Absolute (G90) vs. Relative (G91) Coordinates.</li>
+                                <li>MotionFX Menu Selection & Jog Traditional: Overview of menus (Jog Traditional, Main, Auto-Feed Jog, Create Shapes, Edit Programs, Teach Mode) and manual jogging.</li>
+                                <li>Main Menu, Auto-Feed Jog, Create/Edit Shapes: Using menus for program control, automated jogging, and automatic G-code generation for shapes.</li>
+                            </ul>
+                        `
+                    },
+                    {
+                        id: 'module7',
+                        title: 'Maintenance & Troubleshooting',
+                        details: `
+                            <p class="mb-4">This module covers the essential preventative maintenance tasks required to keep your fiber laser operating efficiently, along with basic troubleshooting tips.</p>
+                            <h4 class="font-semibold mt-4 mb-2">Details:</h4>
+                            <ul class="list-disc list-inside space-y-1 text-gray-700">
+                                <li>Preventative Maintenance: Weekly, Monthly, Annually/As Needed tasks for cleaning (protective disc, chamber, filters, optical rail), and component replacement (controller board battery, protective disc).</li>
+                                <li>Teach Mode for Complex Programs: Creating motion programs using actual parts as references.</li>
+                                <li>Day 2 Wrap-up & Q&A: Review of key concepts, common troubleshooting, and feedback session.</li>
+                            </ul>
+                        `
+                    }
+                ]
+            },
+            fundamentals: {
+                title: 'Laser Theory & Safety',
+                content: `
+                    <div>
+                        <h2 class="text-2xl font-bold mb-6 text-red-600">Laser Fundamentals</h2>
+                        <p class="mb-6 text-gray-700">Understanding the core principles of laser operation is the first step to mastering your equipment. A laser produces a highly concentrated beam of light through a process of Light Amplification by the Stimulated Emission of Radiation (LASER).</p>
+                        <img src="https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjRNY4AIozUQ8nYx8WC5sIwJ911oEsfHinwNriqs2L6l8Hzdt2gl-vAfXkMFScJL2MCY2F6EwYF0ivHv2k3MdjYUCjC9z1Dl2-cM-ydgW2XDX4EDy0khqxLQz87gF9DT63pzcjmP9GNSQ/s1600/eye-img3.gif" alt="Laser Fundamentals Diagram" class="zoomable-image mx-auto my-4 rounded-lg shadow-md w-full max-w-sm border border-gray-300">
+                        <h2 class="text-2xl font-bold mb-6 text-red-600">Laser Parameters</h2>
+                        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+                            <button data-param="energy" class="param-btn text-center p-4 bg-white rounded-lg shadow hover:shadow-lg hover:bg-red-50 transition">
+                                <h3 class="font-semibold text-gray-900">Energy (J)</h3>
+                                <p class="text-sm text-gray-700">Amount of total light emitted.</p>
+                            </button>
+                            <button data-param="pulse_width" class="param-btn text-center p-4 bg-white rounded-lg shadow hover:shadow-lg hover:bg-red-50 transition">
+                                <h3 class="font-semibold text-gray-900">Pulse Width (ms)</h3>
+                                <p class="text-sm text-gray-700">The duration the laser is "ON".</p>
+                            </button>
+                            <button data-param="frequency" class="param-btn text-center p-4 bg-white rounded-lg shadow hover:shadow-lg hover:bg-red-50 transition">
+                                <h3 class="font-semibold text-gray-900">Frequency (Hz)</h3>
+                                <p class="text-sm text-gray-700">How rapidly laser fires.</p>
+                            </button>
+                            <button data-param="peak_power" class="param-btn text-center p-4 bg-white rounded-lg shadow hover:shadow-lg hover:bg-red-50 transition">
+                                <h3 class="font-semibold text-gray-900">Peak Power</h3>
+                                <p class="text-sm text-gray-700">Instantaneous heating; gives penetration.</p>
+                            </button>
+                            <button data-param="average_power" class="param-btn text-center p-4 bg-white rounded-lg shadow hover:shadow-lg hover:bg-red-50 transition">
+                                <h3 class="font-semibold text-gray-900">Average Power</h3>
+                                <p class="text-sm text-gray-700">Average heating; affects melt pool.</p>
+                            </button>
+                            <button data-param="burst" class="param-btn text-center p-4 bg-white rounded-lg shadow hover:shadow-lg hover:bg-red-50 transition">
+                                <h3 class="font-semibold text-gray-900">Burst Mode</h3>
+                                <p class="text-sm text-gray-700">Limits max # of shots back-to-back.</p>
+                            </button>
+                        </div>
+                        <img src="https://ik.imagekit.io/usaxffqiz/Laser%20Fundamentals.jpg?updatedAt=1749830171063" alt="Laser Parameters Diagram" class="zoomable-image mx-auto my-4 rounded-lg shadow-md w-full max-w-sm">
+                        <h2 class="text-2xl font-bold mb-6 text-red-600">Laser Safety: Class 4 System</h2>
+                        <p class="mb-6 text-gray-700">Your laser is a Class 4 system, the highest and most hazardous class. Direct or scattered radiation is dangerous to the eyes and skin. Adherence to safety protocols is mandatory.</p>
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div class="bg-white p-6 rounded-lg shadow">
+                                <h3 class="font-semibold text-lg mb-2 text-red-600">Required Eye Protection</h3>
+                                <p class="text-gray-700">Safety goggles with an Optical Density (OD) of >6.5 for the 1064nm wavelength are required if operating the laser with the chamber open.</p>
+                                <img src="https://bescutter.com/cdn/shop/products/Absorbing-Laser-Safety-Glasses1.png?v=1613234026" alt="Laser Safety Glasses" class="zoomable-image mx-auto my-4 rounded-lg shadow-md w-full max-w-xs">
+                            </div>
+                            <div class="bg-white p-6 rounded-lg shadow">
+                                <h3 class="font-semibold text-lg mb-2 text-red-600">Remote Interlock</h3>
+                                <p class="text-gray-700">This crucial safety feature prevents the laser from firing when a designated door is open, preventing accidental exposure to anyone outside the immediate work area.</p>
+                                <img src="https://www.amdlasers.com/cdn/shop/products/STIL012_webLG.png?v=1735834199" alt="Remote Interlock Device" class="zoomable-image mx-auto my-4 rounded-lg shadow-md w-full max-w-xs">
+                            </div>
+                            <div class="bg-white p-6 rounded-lg shadow">
+                                <h3 class="font-semibold text-lg mb-2 text-red-600">View Shutter & Safety Glass</h3>
+                                <p class="text-gray-700">The internal view shutter blocks the laser beam from your eyes during the pulse, while the specialized safety glass in the chamber absorbs the vast majority of laser light.</p>
+                                <img src="https://ik.imagekit.io/usaxffqiz/View%20Shutter%20and%20Safety%20Glass.jpg?updatedAt=1749830171010" alt="View Shutter and Safety Glass" class="zoomable-image mx-auto my-4 rounded-lg shadow-md w-full max-w-xs">
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            machine: {
+                title: 'Machine Tour & Setup',
+                content: `
+                    <div>
+                        <h2 class="text-2xl font-bold mb-6 text-red-600">Initial Setup Procedures</h2>
+                        <p class="mb-6 text-gray-700">Follow these procedures to correctly start and prepare your laser welder for operation. Each step is crucial for safety and performance.</p>
+                        <div class="space-y-8">
+                             <div class="bg-white p-6 rounded-lg shadow">
+                                <h3 class="font-semibold text-xl mb-3 text-red-600">Power-Up Procedure</h3>
+                                <ol class="list-decimal list-inside space-y-2 text-gray-700">
+                                    <li>If applicable, ensure the MotionFX (MFX) Box is powered on.</li>
+                                    <li>Flip the main power (red switch) to the ON position.</li>
+                                    <li>Turn the key immediately after flipping the main switch. The system will now boot up.</li>
+                                </ol>
+                                <img src="https://ik.imagekit.io/usaxffqiz/Power%20Up%20Procedure.jpg?updatedAt=1749830170972" alt="Power Up Procedure Diagram" class="zoomable-image mx-auto my-4 rounded-lg shadow-md w-full max-w-[180px] h-auto">
+                            </div>
+                            <div class="bg-white p-6 rounded-lg shadow">
+                                <h3 class="font-semibold text-xl mb-3 text-red-600">Inert Gas (Argon) Setup</h3>
+                                <p class="mb-4 text-gray-700">Argon gas is used to shield the weld pool from oxygen, preventing oxidation and ensuring a clean, strong weld.</p>
+                                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                                    <li>Set the Argon flow rate on the regulator to approximately 30 CFH (Cubic Feet per Hour).</li>
+                                    <li>Aim the gas nozzle at a ~45° angle, about 1 inch from the material surface for optimal coverage.</li>
+                                    <li>The gas will activate automatically on the first press of the footswitch.</li>
+                                </ul>
+                                <img src="https://m.media-amazon.com/images/I/51Ejqq9ZnHL.jpg" alt="Argon Gas Regulator" class="zoomable-image mx-auto my-4 rounded-lg shadow-md w-full max-w-[180px] h-auto">
+                            </div>
+                             <div class="bg-white p-6 rounded-lg shadow">
+                                <h3 class="font-semibold text-xl mb-3 text-red-600">Crosshair & Camera Alignment</h3>
+                                <ul class="list-disc list-inside space-y-2 text-gray-700">
+                                     <li><strong>Crosshair:</strong> The crosshair in your microscope must be perfectly aligned with the center of the laser spot. Fire a test shot on a scrap piece, then use the 2mm adjustment wrench to center the crosshair on the weld spot. Repeat until perfectly aligned.</li>
+                                     <li><strong>Camera:</strong> To align the camera view, place a flat surface in focus. Unscrew the c-mount, adjust the focus knob until the camera view is sharp, then lock the c-mount back in place.</li>
+                                </ul>
+                                <img src="https://ik.imagekit.io/usaxffqiz/Crosshair%20and%20Camera%20Alignment.jpg?updatedAt=1749830171059" alt="Crosshair and Camera Alignment" class="zoomable-image mx-auto my-4 rounded-lg shadow-md w-full max-w-[200px] h-auto">
+                            </div>
+                        </div>
+                         <h2 class="text-2xl font-bold mt-12 mb-6 text-red-600">Key Components Overview</h2>
+                         <div class="grid md:grid-cols-2 gap-6">
+                            <div class="bg-white p-6 rounded-lg shadow">
+                                <h3 class="font-semibold text-lg mb-2 text-red-600">Laser Engine & Fiber Optic Cable</h3>
+                                <p class="text-gray-700">The engine generates light at 1064nm, which is amplified and transported to the optical rail via a specialized fiber optic cable.</p>
+                                <img src="https://laserstar.net/wp-content/uploads/2024/10/FiberEngine-WebReady-FiberEngine-Left.png" alt="Laser Engine and Fiber Optic Cable" class="zoomable-image mx-auto my-4 rounded-lg shadow-md w-full max-w-sm">
+                            </div>
+                             <div class="bg-white p-6 rounded-lg shadow">
+                                <h3 class="font-semibold text-lg mb-2 text-red-600">Optical Rail</h3>
+                                <p class="text-gray-700">This assembly shapes and directs the laser beam. It includes the collimator (makes light parallel), shutter (blocks beam), beam expander (controls diameter), and beam bender (directs beam down).</p>
+                                <img src="https://ik.imagekit.io/usaxffqiz/Optical%20Rail.jpg?updatedAt=1749830170981" alt="Optical Rail Diagram" class="zoomable-image mx-auto my-4 rounded-lg shadow-md w-full max-w-sm">
+                            </div>
+                         </div>
+                    </div>
+                `
+            },
+            weldlab: {
+                title: 'Interactive Weld Lab',
+                content: `
+                    <div class="bg-white p-8 rounded-lg shadow-md">
+                        <p class="text-center mb-8 text-gray-700">Explore how changing laser parameters affects the final weld. Adjust the sliders to see how the weld profile changes in real time.</p>
+                        <div class="grid lg:grid-cols-3 gap-8">
+                            <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow space-y-6">
+                                <div>
+                                    <label for="energy-slider" class="font-medium text-gray-900">Energy (Joules): <span id="energy-value">5</span> J</label>
+                                    <input id="energy-slider" type="range" min="1" max="50" value="5" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-red-600">
+                                </div>
+                                <div>
+                                    <label for="pulse-width-slider" class="font-medium text-gray-900">Pulse Width (ms): <span id="pulse-width-value">5</span> ms</label>
+                                    <input id="pulse-width-slider" type="range" min="1" max="20" value="5" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-red-600">
+                                </div>
+                                <div>
+                                    <label for="beam-diameter-slider" class="font-medium text-gray-900">Beam Diameter (Steps): <span id="beam-diameter-value">0</span> Steps</label>
+                                    <input id="beam-diameter-slider" type="range" min="0" max="80" value="0" step="1" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-red-600">
+                                </div>
+                                <div class="text-sm text-gray-700 border-t pt-4">
+                                    <p><strong class="text-gray-900">Higher Energy:</strong> Increases depth and width.</p>
+                                    <p><strong class="text-gray-900">Longer Pulse Width:</strong> Increases heat input, creating a wider, more fluid weld.</p>
+                                    <p><strong class="text-gray-900">Larger Beam Diameter:</strong> Spreads energy out, reducing penetration but creating a wider, smoother surface finish.</p>
+                                </div>
+                            </div>
+                            <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow">
+                                <h3 class="font-semibold text-xl mb-4 text-red-600">Estimated Weld Geometry</h3>
+                                <p class="text-sm text-gray-700 mb-4">Note: This is just a graphical tool. Results vary depending on material, finish, and model number.</p>
+                                <div class="chart-container flex justify-center items-center pb-12">
+                                    <canvas id="weldProfileCanvas" style="display: block;"></canvas>
+                                    <div class="axis-label-x">Weld Width</div>
+                                    <div class="axis-label-y">Weld Penetration</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-12 grid md:grid-cols-2 gap-8 items-start">
+                             <div class="bg-white p-6 rounded-lg shadow">
+                                <h3 class="font-semibold text-xl mb-4 text-red-600">Pulse Shape (P3)</h3>
+                                <p class="text-sm mb-4 text-gray-700">Control how energy is delivered within a single pulse for specialized applications.</p>
+                                <select id="pulse-shape-select" class="w-full p-2 border border-gray-300 rounded-md text-gray-800">
+                                    <option value="basic">Basic Profile</option>
+                                    <option value="spike">Spike Profile</option>
+                                    <option value="rampdown">Ramp Down Profile</option>
+                                    <option value="pyramid">Pyramid Profile</option>
+                                    <option value="rampup">Ramp Up Profile</option>
+                                    <option value="prepulsed">Pre Pulse Profile</option>
+                                    <option value="burst">Burst Profile</option>
+                                </select>
+                                <p id="pulse-shape-description" class="mt-4 text-sm text-gray-700"></p>
+                             </div>
+                             <div class="bg-white p-6 rounded-lg shadow">
+                                <div class="chart-container" style="height:250px; max-height:250px;">
+                                    <canvas id="pulseShapeChart"></canvas>
+                                </div>
+                             </div>
+                        </div>
+
+                        <div class="mt-12 bg-white p-6 rounded-lg shadow">
+                            <h3 class="font-semibold text-xl mb-4 text-red-600">Weld Types & Techniques</h3>
+                             <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+                                <div class="border border-gray-200 p-4 rounded-md">
+                                    <h4 class="font-semibold mb-1 text-gray-900">Keyhole Weld</h4>
+                                    <p class="text-gray-700">A deep, narrow, robust weld created by high power density. Ideal for strong, complete joints.</p>
+                                </div>
+                                <div class="border border-gray-200 p-4 rounded-md">
+                                    <h4 class="font-semibold mb-1 text-gray-900">Cold Weld (Smoothing)</h4>
+                                    <p class="text-gray-700">A shallow, wide weld from a spread-out beam. Excellent for surface finishing, also called "Hammering".</p>
+                                </div>
+                                <div class="border border-gray-200 p-4 rounded-md">
+                                    <h4 class="font-semibold mb-1 text-gray-900">Holes / Pits</h4>
+                                    <p class="text-gray-700">Undesirable cavities caused by excessive power concentration. Indicates parameters need adjustment.</p>
+                                </div>
+                             </div>
+                        </div>
+                    </div>
+                `
+            },
+            motionfx: {
+                title: 'MotionFX & G-Code',
+                content: `
+                    <div>
+                        <p class="mb-6 text-gray-700">MotionFX is the software that controls the multi-axis movement of your laser system. It operates using G-Code, a standard language for numerical control programming.</p>
+                        <img src="https://ik.imagekit.io/usaxffqiz/MFX.jpg?updatedAt=1749837358956" alt="MotionFX Software Interface" class="zoomable-image mx-auto my-6 rounded-lg shadow-md w-full max-w-md">
+                        <div class="bg-white p-6 rounded-lg shadow mb-8">
+                            <h3 class="font-semibold text-xl mb-4 text-red-600">Crucial Concept: Absolute vs. Relative Coordinates</h3>
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <h4 class="font-semibold text-gray-900">G90 - Absolute Coordinates</h4>
+                                    <p class="text-sm text-gray-700">All coordinates are measured from a fixed origin point (0,0). <br> A command to move to X10 will always go to the position X10.</p>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-gray-900">G91 - Relative Coordinates</h4>
+                                    <p class="text-sm text-gray-700">All coordinates are measured from the laser's current position. <br>A command to move X10 will move 10 units in X from where it is now.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h3 class="text-xl font-bold mb-4 text-red-600">Common G-Code Commands</h3>
+                        <div id="gcode-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
+                    </div>
+                `
+            },
+            maintenance: {
+                title: 'Preventative Maintenance Schedule',
+                content: `
+                    <div>
+                        <p class="mb-8 text-gray-700">Regular preventative maintenance is minimal but crucial for ensuring the longevity and performance of your fiber laser. The primary focus is on keeping optical components clean.</p>
+                        <div class="space-y-6">
+                            <div class="bg-white p-6 rounded-lg shadow flex flex-col items-center">
+                                <div class="flex-shrink-0 h-12 w-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mb-4">
+                                    <span class="text-xl font-bold">W</span>
+                                </div>
+                                <h3 class="font-semibold text-xl text-red-600 mb-2">Weekly</h3>
+                                <ul class="list-disc list-inside text-gray-700 text-left w-full space-y-1">
+                                    <li>Clean the protective disc with approved lens cleaner. This is the most important regular maintenance task to prevent damage to the focus lens.</li>
+                                </ul>
+                                <img src="https://ik.imagekit.io/usaxffqiz/Weekly%20Maintenance.jpg?updatedAt=1749834943953" alt="Weekly Maintenance Example" class="zoomable-image mx-auto my-4 rounded-lg shadow-md w-[120px] h-auto">
+                            </div>
+                             <div class="bg-white p-6 rounded-lg shadow flex flex-col items-center">
+                                <div class="flex-shrink-0 h-12 w-12 rounded-full bg-blue-100 text-blue-900 flex items-center justify-center mb-4">
+                                    <span class="text-xl font-bold">M</span>
+                                </div>
+                                <h3 class="font-semibold text-xl text-red-600 mb-2">Monthly</h3>
+                                <ul class="list-disc list-inside text-gray-700 text-left w-full space-y-1">
+                                    <li>Gently wipe down the inside of the weld chamber.</li>
+                                    <li>If necessary, remove and wash the chamber air filter with water and let it dry completely before reinstalling.</li>
+                                </ul>
+                                 <img src="https://ik.imagekit.io/usaxffqiz/Monthy%20Maintenance.jpg?updatedAt=1749834825825" alt="Monthly Maintenance Example" class="zoomable-image mx-auto my-4 rounded-lg shadow-md w-[120px] h-auto">
+                            </div>
+                             <div class="bg-white p-6 rounded-lg shadow flex flex-col items-center">
+                                <div class="flex-shrink-0 h-12 w-12 rounded-full bg-yellow-100 text-yellow-600 flex items-center justify-center mb-4">
+                                    <span class="text-xl font-bold">Y</span>
+                                </div>
+                                <h3 class="font-semibold text-xl text-red-600 mb-2">Annually / As Needed</h3>
+                                 <ul class="list-disc list-inside mt-1 space-y-2 text-gray-700 text-left w-full">
+                                    <li>Check and replace the blue filters on the main laser body.</li>
+                                    <li>If dust collects on the optical rail, use optical-grade compressed air (no bitterants).</li>
+                                    <li>The controller board battery may need replacement every 2-3 years.</li>
+                                    <li>The protective disc is disposable and should be replaced when it can no longer be cleaned effectively.</li>
+                                </ul>
+                                <img src="https://ik.imagekit.io/usaxffqiz/Annual%20Maintenance.jpg?updatedAt=1749834944036" alt="Annual Maintenance Example" class="zoomable-image mx-auto my-4 rounded-lg shadow-md w-[120px] h-auto">
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            files: {
+                title: 'Training Files & Resources',
+                content: `
+                    <div class="bg-white p-8 rounded-lg shadow-md">
+                        <h2 class="text-2xl font-bold mb-6 text-red-600">Presentations</h2>
+                        <p class="mb-4 text-gray-700">Download the presentation materials for your reference.</p>
+                        <div class="space-y-3 mb-10">
+                            <a href="https://ik.imagekit.io/usaxffqiz/Fiber%20Laser%20Presentation.pdf?updatedAt=1749840272241" target="_blank" class="block bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg transition duration-200 ease-in-out">
+                                Download: Fiber Laser Presentation (PDF)
+                            </a>
+                            <a href="https://ik.imagekit.io/usaxffqiz/Nd_YAG%20Laser%20Presentation.pptx.pdf?updatedAt=1749840272853" target="_blank" class="block bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg transition duration-200 ease-in-out">
+                                Download: Nd_YAG Laser Presentation (PDF)
+                            </a>
+                        </div>
+
+                        <h2 class="text-2xl font-bold mb-6 text-red-600">Print for In-Person Training</h2>
+                        <p class="mb-4 text-gray-700">These documents are recommended for printing and use during hands-on training sessions.</p>
+                        <div class="space-y-3 mb-10">
+                            <a href="https://ik.imagekit.io/usaxffqiz/Fiber%20Laser%20-%20Preventative%20Maintenance.pdf?updatedAt=1749840271946" target="_blank" class="block bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg transition duration-200 ease-in-out">
+                                Download: Fiber Laser - Preventative Maintenance (PDF)
+                            </a>
+                            <a href="https://ik.imagekit.io/usaxffqiz/Delivery%20&%20Acceptance%20(Customize%20for%20each%20customer).doc?updatedAt=1749840272100" target="_blank" class="block bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg transition duration-200 ease-in-out">
+                                Download: Delivery & Acceptance (DOC)
+                            </a>
+                            <a href="https://ik.imagekit.io/usaxffqiz/P-3.pdf?updatedAt=1749840271782" target="_blank" class="block bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg transition duration-200 ease-in-out">
+                                Download: P-3 (PDF)
+                            </a>
+                            <a href="https://ik.imagekit.io/usaxffqiz/MFX.pdf?updatedAt=1749840271448" target="_blank" class="block bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg transition duration-200 ease-in-out">
+                                Download: MFX (PDF)
+                            </a>
+                            <a href="https://ik.imagekit.io/usaxffqiz/B.E.%20Illustrations.pdf?updatedAt=1749840270939" target="_blank" class="block bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg transition duration-200 ease-in-out">
+                                Download: B.E. Illustrations (PDF)
+                            </a>
+                            <a href="https://ik.imagekit.io/usaxffqiz/PREVENTATIVE%20MAINTENANCE.pdf?updatedAt=1749834825825" target="_blank" class="block bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg transition duration-200 ease-in-out">
+                                Download: Preventative Maintenance (PDF)
+                            </a>
+                            <a href="https://ik.imagekit.io/usaxffqiz/Fiber%20Laser%20Training%20Worksheet.pdf?updatedAt=1749840270569" target="_blank" class="block bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg transition duration-200 ease-in-out">
+                                Download: Fiber Laser Training Worksheet (PDF)
+                            </a>
+                            <a href="https://ik.imagekit.io/usaxffqiz/G%20Code%20Commands.pdf?updatedAt=1749840270559" target="_blank" class="block bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg transition duration-200 ease-in-out">
+                                Download: G-Code Commands (PDF)
+                            </a>
+                            <a href="https://ik.imagekit.io/usaxffqiz/Training%20Check%20List.pdf?updatedAt=1749840270471" target="_blank" class="block bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg transition duration-200 ease-in-out">
+                                Download: Training Check List (PDF)
+                            </a>
+                        </div>
+                        <h2 class="text-2xl font-bold mb-6 mt-10 text-red-600">Pre-Training Email</h2>
+                        <p class="mb-4 text-gray-700">Use this template to send email to customers the week prior to training.</p>
+                        <div class="space-y-3">
+                            <a href="https://docs.google.com/document/d/1vJDeSfoEKAQwYnpPy6RHed7P0G-nylVz/edit?usp=sharing&ouid=115756580806327685096&rtpof=true&sd=true" target="_blank" class="block bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg transition duration-200 ease-in-out">
+                                Download: Pre-Training Email (Google Doc)
+                            </a>
+                        </div>
+                    </div>
+                `
+            },
+            pre_training_email: { // New tab content for Pre-Training Email
+                title: 'Pre-Training Email',
+                content: `
+                    <div class="bg-white p-8 rounded-lg shadow-md">
+                        <h2 class="text-2xl font-bold mb-6 text-red-600">Pre-Training Email Template</h2>
+                        <p class="mb-4 text-gray-700">Use this template to send email to customers the week prior to training.</p>
+                        
+                        <div class="mb-6 space-y-3">
+                            <a href="https://ik.imagekit.io/usaxffqiz/Fiber%20Laser%20Training%20Worksheet.pdf?updatedAt=1749840270569" target="_blank" class="block bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg transition duration-200 ease-in-out">
+                                Download: Training Check List - Fiber (PDF)
+                            </a>
+                            <a href="https://ik.imagekit.io/usaxffqiz/Nd%20YAG%20Laser%20Training%20Worksheet.pdf?updatedAt=1750336128106" target="_blank" class="block bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg transition duration-200 ease-in-out">
+                                Download: Training Check List - Flashlamp (PDF)
+                            </a>
+                        </div>
+
+                        <div class="p-6 border border-gray-200 rounded-lg bg-gray-50 text-gray-800 leading-relaxed whitespace-pre-wrap">
+Subject: Upcoming Laser Welding Training – Preparing for Your Session
+
+Body:
+
+Hi [Customer Name],
+
+I'm Nolan McGinley, the Applications Engineer for your laser welding training next week. To make sure the session is as valuable as possible, I'd like to share what a typical training covers and ask a few questions to help me prepare.
+
+Our standard training, outlined in the attached "training worksheet" document, usually focuses on topics from start-up procedures to laser theory, which typically takes up most of the first day. After that, we'll have ample time for hands-on practice, motion control, and any other specific topics or techniques your team would like to explore. While we're required to cover the items on the list, we'll have plenty of flexibility to focus on your priorities.
+
+To ensure we're on the same page for next week, please answer the following questions:
+
+1. What are your primary goals for this training? Are there specific skills or topics you'd like to emphasize?
+2. Will you have parts available for practice welding?
+3. How many people will attend the training? If more than one, could you share their experience levels with laser welding?
+4. Which training schedule works best for you: 7 AM–2 PM, 8 AM–3 PM, or 9 AM–4 PM?
+5. Could you confirm the training address?
+6. Do you have any other questions or concerns I can address before the training?
+
+Please reply to this email or call me at 407-720-7613 at your convenience. I look forward to working with you and your team next week!
+
+Sincerely,
+                        </div>
+                    </div>
+                `
+            },
+            g_codes: [
+                { code: 'G90', desc: 'Switch to Absolute Coordinates. All positions reference the program origin (0,0).', syntax_example: 'G90', syntax_description: 'Sets the machine to absolute positioning mode.' },
+                { code: 'G91', desc: 'Switch to Relative Coordinates. All positions reference the current location.', syntax_example: 'G91', syntax_description: 'Sets the machine to incremental positioning mode.' },
+                { code: 'G0', desc: 'Rapid Move (Laser OFF). Used for positioning the laser head quickly between weld paths.', syntax_example: 'G0 X10.00 Y10', syntax_description: 'Moves the laser to X=10.00, Y=10 without firing.' },
+                { code: 'G1', desc: 'Linear Move (Laser ON). Used for creating straight line welds.', syntax_example: 'G1 X10.00 Y10', syntax_description: 'Moves the laser to X=10.00, Y=10 while firing.' },
+                { code: 'G2', desc: 'Clockwise Arc. Moves in a clockwise circular path.', syntax_example: 'G2 X10.0 Y10.0 I5.0 J5.0', syntax_description: 'Moves the laser clockwise to X=10.0, Y=10.0 with arc center offset I=5.0, J=5.0 from start point.' },
+                { code: 'G3', desc: 'Counter-Clockwise Arc. Moves in a counter-clockwise circular path.', syntax_example: 'G3 X20.0 Y10.0 I10.0 J10.0', syntax_description: 'Moves the laser counter-clockwise to X=20.0, Y=10.0 with arc center offset I=10.0, J=10.0 from start point.' },
+                { code: 'I', desc: 'Defines the X-axis distance from the arc start point to the arc center point.', syntax_example: 'G2 X10.0 Y10.0 I5.0 J5.0', syntax_description: 'Used in G2/G3 commands to specify X-offset of arc center.' },
+                { code: 'J', desc: 'Defines the Y-axis distance from the arc start point to the arc center point.', syntax_example: 'G2 X10.0 Y10.0 I5.0 J5.0', syntax_description: 'Used in G2/G3 commands to specify Y-offset of arc center.' },
+                { code: 'R', desc: 'Defines the rotation angle in degrees for the rotary axis.', syntax_example: 'R90', syntax_description: 'Rotates the rotary axis by 90 degrees (relative mode).' },
+                { code: 'POINT', desc: 'Fires the laser for a specified duration (in ms) at a single point.', syntax_example: 'POINT 1000', syntax_description: 'Turns on the laser beam for 1000 milliseconds (1 second).' },
+                { code: 'SLEEP', desc: 'Pauses all machine functions for a specified duration (in ms).', syntax_example: 'SLEEP 400', syntax_description: 'Pauses program execution for 400 milliseconds.' },
+                { code: 'LOOP', desc: 'Starts a block of code that will be repeated a specified number of times.', syntax_example: 'LOOP 6\n  G0 X10.0 Y10.0\n  G1 X40.0 Y40.0\nENDLOOP', syntax_description: 'Begins a loop that will execute 6 times.' },
+                { code: 'END LOOP', desc: 'Marks the end of a LOOP block.', syntax_example: 'ENDLOOP', syntax_description: 'Closes a LOOP block.' },
+                { code: 'PAUSE', desc: 'Pauses the program and waits for the operator to press "Resume". Useful for mid-program adjustments or inspections.', syntax_example: 'PAUSE', syntax_description: 'Halts program execution until manually resumed.' },
+                { code: 'FR', desc: 'Feed Rate - Sets speed for axis for lasing commands only. Units in mm/s.', syntax_example: 'FR X10 Y10 Z10 R10', syntax_description: 'Sets feed rates for X, Y, Z, and Rotary axes to 10 mm/s.'}
+            ],
+             parameters: {
+                energy: {
+                    label: 'Energy (Joule)',
+                    description: 'The unit of energy used to describe the amount of light delivered through the laser in a single pulse. Formula: Power (Watts) x Pulse Width (seconds).'
+                },
+                pulse_width: {
+                    label: 'Pulse Width (ms)',
+                    description: 'The laser "ON" time. The duration of time that the laser is firing per pulse; measured in milliseconds (ms).'
+                },
+                frequency: {
+                    label: 'Frequency (Hz)',
+                    description: 'The number of laser pulses emitted per second; measured in Hertz (Hz). Frequency may also be referred to as repetition rate.'
+                },
+                peak_power: {
+                    label: 'Peak Power',
+                    description: 'The rate of energy flow in every pulse. Peak Power is the instantaneous heating and is what gives you penetration. Formula: Energy per pulse (Joule) / pulse width (seconds).'
+                },
+                average_power: {
+                    label: 'Average Power',
+                    description: 'The rate of energy flow averaged over one full period. Average Power is the average heating and is what gives you melt pool characteristics. Formula: Energy Per Pulse (Joule) x Frequency (Hz).'
+                },
+                burst: {
+                    label: 'Burst Mode',
+                    description: 'Limits the maximum number of shots taken back-to-back.'
+                }
+            },
+             pulse_shapes: {
+                basic: {
+                    label: 'Basic Profile',
+                    data: [100, 100, 100],
+                    desc: 'A flat, consistent energy delivery. Ideal for most standard welding applications on materials like Stainless Steel, Platinum, and Yellow Gold.'
+                },
+                spike: {
+                    label: 'Spike Profile',
+                    data: [100, 25, 25],
+                    desc: 'A high energy spike at the beginning of the pulse helps overcome the high reflectivity of materials like Silver and Copper.'
+                },
+                rampdown: {
+                    label: 'Ramp Down Profile',
+                    data: [100, 75, 50],
+                    desc: 'Gradually decreases energy to prevent thermal cracking and cratering at the end of a weld, especially on thermally sensitive materials like Silver and Aluminum.'
+                },
+                pyramid: {
+                    label: 'Pyramid Profile',
+                    data: [50, 100, 50],
+                    desc: 'A peak of energy in the middle of the pulse. Useful for welding Titanium and joining dissimilar materials with different melting points.'
+                },
+                rampup: {
+                    label: 'Ramp Up Profile',
+                    data: [50, 75, 100],
+                    desc: 'Gradually increases energy. Helpful when welding materials with very low reflectivity or many volatile contaminants/plating, to prevent spatter and ensure consistent coupling. Used with White Gold.'
+                },
+                prepulsed: {
+                    label: 'Pre Pulse Profile',
+                    data: [75, 25, 100],
+                    desc: 'An initial energy section to vaporize contaminants, followed by a brief delay (simulated as low energy) before the main weld process. Used with Eyeglasses, plated, anodized, painted, or oil-contaminated parts.'
+                },
+                burst: {
+                    label: 'Burst Profile',
+                    data: [100, 100, 100],
+                    desc: 'Delivers pulse energy in repeated cycles with consistent peak power. Increases weld depth and is beneficial for Pewter, Hollow (thin wall) and Low Melting Pot Metal.'
+                }
+            }
+        };
+
+        let pulseShapeChart; // weldProfileCanvas is now drawn manually
+
+        function initWeldProfileCanvas() {
+            const canvas = document.getElementById('weldProfileCanvas');
+            const ctx = canvas.getContext('2d');
+
+            // Make canvas fill its container and be responsive
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+
+            // Add resize listener to redraw when container changes size
+            window.addEventListener('resize', () => {
+                canvas.width = canvas.offsetWidth;
+                canvas.height = canvas.offsetHeight;
+                updateWeldProfile();
+            });
+
+            updateWeldProfile(); // Call to set initial state
+        }
+
+        function updateWeldProfile() {
+            const canvas = document.getElementById('weldProfileCanvas');
+            const ctx = canvas.getContext('2d');
+
+            // Clear the canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Get slider values
+            const energy = parseFloat(document.getElementById('energy-slider').value);
+            const pulseWidth = parseFloat(document.getElementById('pulse-width-slider').value);
+            const beamDiameter = parseFloat(document.getElementById('beam-diameter-slider').value);
+            
+            document.getElementById('energy-value').textContent = `${energy.toFixed(1)}`;
+            document.getElementById('pulse-width-value').textContent = `${pulseWidth.toFixed(1)}`;
+            document.getElementById('beam-diameter-value').textContent = `${beamDiameter.toFixed(1)}`;
+
+            // --- Define fixed logical coordinate system for the weld ---
+            // These define the total visual space for the weld diagram
+            const fixedLogicalWidth = 40; 
+            const fixedLogicalPenetration = 12; 
+
+            // --- Mapping from logical coordinates to canvas pixels ---
+            const surfaceY = canvas.height * 0.1;
+            const maxCanvasY = canvas.height * 0.9;
+            const centerX = canvas.width / 2;
+            const xScale = canvas.width / fixedLogicalWidth;
+            const yScale = (maxCanvasY - surfaceY) / fixedLogicalPenetration;
+
+            // REVISED formulas for visual effect and responsiveness
+            // Penetration: Increased energy influence, adjusted exponential decrease for beamDiameter
+            const penetration = Math.max(0.1, (energy * 0.25) + (pulseWidth * 0.15) - (Math.pow(beamDiameter, 2) * 0.0008)); 
+            
+            // Width now visibly changes within the fixed canvas
+            const weldWidthLogical = Math.max(0.5, (beamDiameter * 0.2) + (pulseWidth * 0.6) + (energy * 0.06)); 
+
+            // --- Drawing the Fixed Surface ---
+            ctx.beginPath();
+            ctx.strokeStyle = '#4b5563'; // Dark grey
+            ctx.lineWidth = 2;
+            ctx.moveTo(0, surfaceY);
+            ctx.lineTo(canvas.width, surfaceY);
+            ctx.stroke();
+            ctx.closePath();
+
+            // --- Drawing the Weld Shape ---
+            ctx.beginPath();
+            ctx.fillStyle = 'rgba(220, 38, 38, 0.5)'; // Red with transparency
+            ctx.strokeStyle = '#dc2626'; // Solid red border
+            ctx.lineWidth = 2;
+
+            // Points of the weld profile (relative to center X and surface Y)
+            const profilePoints = [
+                { x_logical: -weldWidthLogical / 2, y_logical: 0 },
+                { x_logical: -weldWidthLogical / 3, y_logical: penetration * 0.5 },
+                { x_logical: -weldWidthLogical / 6, y_logical: penetration * 0.9 },
+                { x_logical: 0, y_logical: penetration }, // Deepest point
+                { x_logical: weldWidthLogical / 6, y_logical: penetration * 0.9 },
+                { x_logical: weldWidthLogical / 3, y_logical: penetration * 0.5 },
+                { x_logical: weldWidthLogical / 2, y_logical: 0 }
+            ];
+
+            // Convert logical points to canvas pixels
+            ctx.moveTo(centerX + profilePoints[0].x_logical * xScale, surfaceY + profilePoints[0].y_logical * yScale); // Start on the surface
+
+            // Draw the rest of the shape, mapping logical to pixel coordinates
+            for (let i = 1; i < profilePoints.length; i++) {
+                ctx.lineTo(centerX + profilePoints[i].x_logical * xScale, surfaceY + profilePoints[i].y_logical * yScale);
+            }
+
+            ctx.closePath(); // Connects the last point back to the starting point
+            ctx.fill();
+            ctx.stroke();
+        }
+
+
+        function initPulseShapeChart() {
+            const ctx = document.getElementById('pulseShapeChart').getContext('2d');
+            // Destroy existing chart instance if it exists to prevent conflicts
+            if (pulseShapeChart) {
+                pulseShapeChart.destroy();
+            }
+            pulseShapeChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Section 1', 'Section 2', 'Section 3'],
+                    datasets: [{
+                        label: 'Energy Distribution',
+                        backgroundColor: ['#4267B2', '#2A4D8D', '#0A255B'], /* Navy shades */
+                        data: [],
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: { callback: value => `${value}%` }
+                        }
+                    }
+                }
+            });
+            updatePulseShape(); // Call to set initial state
+        }
+
+        function updatePulseShape() {
+            if (!pulseShapeChart) return;
+            const selectedShape = document.getElementById('pulse-shape-select').value;
+            const shapeData = appData.pulse_shapes[selectedShape];
+            
+            pulseShapeChart.data.datasets[0].data = shapeData.data;
+            pulseShapeChart.options.plugins.title = { display: true, text: shapeData.label, font: { size: 16, weight: 'bold' }, color: '#333' }; // Added title styling
+            pulseShapeChart.update();
+            
+            document.getElementById('pulse-shape-description').textContent = shapeData.desc;
+        }
+
+        function renderGCodeGrid() {
+            const grid = document.getElementById('gcode-grid');
+            if (!grid) return;
+            grid.innerHTML = appData.g_codes.map(g => `
+                <button data-code="${g.code}" class="gcode-btn text-center p-4 bg-white rounded-lg shadow hover:shadow-lg hover:bg-red-50 transition">
+                    <span class="font-mono font-bold text-lg text-gray-900">${g.code}</span>
+                </button>
+            `).join('');
+
+            document.querySelectorAll('.gcode-btn').forEach(btn => {
+                btn.addEventListener('click', () => showGCodeModal(btn.dataset.code));
+            });
+        }
+
+        function showGCodeModal(code) {
+            const gcode = appData.g_codes.find(g => g.code === code);
+            if (gcode) {
+                const modalBody = document.getElementById('modal-body');
+                modalBody.innerHTML = `
+                    <h3 class="text-2xl font-bold font-mono text-red-600 mb-4">${gcode.code}</h3>
+                    <p class="text-gray-800">${gcode.desc}</p>
+                    ${gcode.syntax_example ? `<p class="mt-4 text-gray-900 font-semibold">Example Syntax:</p><pre class="bg-gray-100 p-3 rounded-md text-sm font-mono overflow-x-auto">${gcode.syntax_example}</pre>` : ''}
+                    ${gcode.syntax_description ? `<p class="mt-2 text-gray-700">${gcode.syntax_description}</p>` : ''}
+                `;
+                document.getElementById('modal-container').classList.remove('hidden');
+                document.getElementById('modal-container').classList.add('flex');
+            }
+        }
+
+        function showParamModal(paramId) {
+            const param = appData.parameters[paramId];
+            if (param) {
+                const modalBody = document.getElementById('modal-body');
+                modalBody.innerHTML = `
+                    <h3 class="text-2xl font-bold text-red-600 mb-4">${param.label}</h3>
+                    <p class="text-gray-800">${param.description}</p>
+                `;
+                document.getElementById('modal-container').classList.remove('hidden');
+                document.getElementById('modal-container').classList.add('flex');
+            }
+        }
+
+        function showModuleModal(dayCategory, moduleId) { 
+            let moduleData;
+            // Access module data using the day category and module ID
+            if (dayCategory === 'day1') {
+                moduleData = appData.welcome_overview.day1_modules_content.find(m => m.id === moduleId);
+            } else if (dayCategory === 'day2') {
+                moduleData = appData.welcome_overview.day2_modules_content.find(m => m.id === moduleId);
+            }
+
+            if (moduleData) {
+                const modalBody = document.getElementById('modal-body');
+                modalBody.innerHTML = `
+                    <h3 class="text-2xl font-bold text-red-600 mb-4">${moduleData.title}</h3>
+                    <div class="text-gray-800">${moduleData.details}</div>
+                `;
+                document.getElementById('modal-container').classList.remove('hidden');
+                document.getElementById('modal-container').classList.add('flex');
+            } else {
+                console.error("Module data not found for:", dayCategory, moduleId);
+            }
+        }
+
+        function renderTabContent(tabId) {
+            const contentArea = document.getElementById('tab-content');
+            const data = appData[tabId];
+            if (data) {
+                if (tabId === 'welcome_overview') {
+                    contentArea.innerHTML = data.content;
+
+                    // Re-attach event listeners for module buttons *after* HTML is rendered
+                    document.querySelectorAll('.module-btn').forEach(btn => {
+                        btn.addEventListener('click', (event) => {
+                            // Use dataset.dayCategory and dataset.moduleId directly
+                            const dayCategory = event.currentTarget.dataset.dayCategory; 
+                            const moduleId = event.currentTarget.dataset.moduleId; 
+                            showModuleModal(dayCategory, moduleId);
+                        });
+                    });
+
+                } else {
+                    contentArea.innerHTML = data.content;
+                }
+            }
+
+            // Re-initialize charts and event listeners when switching to 'weldlab'
+            if (tabId === 'weldlab') {
+                initWeldProfileCanvas(); 
+                initPulseShapeChart();
+                document.getElementById('energy-slider').addEventListener('input', updateWeldProfile);
+                document.getElementById('pulse-width-slider').addEventListener('input', updateWeldProfile);
+                document.getElementById('beam-diameter-slider').addEventListener('input', updateWeldProfile);
+                document.getElementById('pulse-shape-select').addEventListener('change', updatePulseShape);
+            } else if (tabId === 'motionfx') {
+                renderGCodeGrid();
+            } else if (tabId === 'fundamentals') {
+                document.querySelectorAll('.param-btn').forEach(btn => {
+                    btn.addEventListener('click', () => showParamModal(btn.dataset.param));
+                });
+            }
+        }
+
+        function setupTabs() {
+            const tabs = document.querySelectorAll('.nav-tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabId = tab.dataset.tab;
+                    tabs.forEach(t => {
+                        if (t.dataset.tab === tabId) {
+                            t.classList.remove('tab-inactive');
+                            t.classList.add('tab-active');
+                        } else {
+                            t.classList.remove('tab-active');
+                            t.classList.add('tab-inactive');
+                        }
+                    });
+                    renderTabContent(tabId);
+                });
+            });
+            // Click the first tab to load initial content
+            tabs[0].click();
+        }
+        
+        function setupModal() {
+            const modalContainer = document.getElementById('modal-container');
+            const modalClose = document.getElementById('modal-close');
+            modalClose.addEventListener('click', () => {
+                modalContainer.classList.add('hidden');
+                modalContainer.classList.remove('flex');
+            });
+             modalContainer.addEventListener('click', (e) => {
+                // Close modal if clicked outside modal content
+                if(e.target === modalContainer) {
+                    modalContainer.classList.add('hidden');
+                    modalContainer.classList.remove('flex');
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setupTabs();
+            setupModal();
+
+            // Add event listeners for zoomable images
+            document.querySelectorAll('.zoomable-image').forEach(img => {
+                // Ensure the logo is not zoomable
+                if (img.alt === "LaserStar Technologies Logo") {
+                    img.classList.remove('zoomable-image');
+                    return;
+                }
+                img.addEventListener('click', () => {
+                    const modalBody = document.getElementById('modal-body');
+                    // Create a new image element to ensure it loads correctly in the modal
+                    const modalImg = document.createElement('img');
+                    modalImg.src = img.src;
+                    modalImg.alt = img.alt;
+                    modalImg.classList.add('zoomed-in-image'); // Apply zoom styling
+
+                    modalBody.innerHTML = ''; // Clear previous content
+                    modalBody.appendChild(modalImg);
+                    
+                    document.getElementById('modal-container').classList.remove('hidden');
+                    document.getElementById('modal-container').classList.add('flex');
+                });
+            });
+        });
+    </script>
+</body>
+</html>
